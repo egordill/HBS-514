@@ -1,0 +1,88 @@
+****************************************************
+**HBS 514
+**Problem Set 2
+****************************************************
+
+****************************************************
+* 1. Examining Dataset & Table Generation
+****************************************************
+clear
+use "MergedIncomeEducationalDataset.dta"
+describe
+
+rename Y_24 FY24Income
+
+summarize FY24Income BachelorsPercent IncomePerBachRatio
+**FY24 Income averages $71,927, with noticable variation across observations
+**Bachelor's Attainment averages 36.2%, but it ranges widely, which could indicate uneven educational attainment
+**Education related variables have fewer observations than income, which indicates missing data
+
+**Frequency Tables
+tabulate FY24Income 
+**The distribution has a few high-income observations above ~$90,000
+
+tabulate BachelorsPercent 
+**Most observations fall between 30% and 40% suggesting a normal range of attainment
+**There is one very high value at 65.5% stands as an outlier
+
+tabulate IncomePerBachRatio
+**The majority of values fall between $1,8000 & $2,200 that shows a consistency, alongside this there are few higher ratios that show that some areas generate higher income per bachelor's degree
+
+**Cross-Tabulation
+**Created categories to have more depth. Income and bachelor's percent are grouped into low, middle and high ranges. Tabulate was then used to compare each range to see how income and education are related!
+
+gen income_cat = .
+replace income_cat = 1 if FY24Income < 60000
+replace income_cat = 2 if FY24Income >= 60000 & FY24Income <= 80000
+replace income_cat = 3 if FY24Income > 80000
+
+gen bachelor_cat = .
+replace bachelor_cat = 1 if BachelorsPercent < 30
+replace bachelor_cat = 2 if BachelorsPercent >= 30 & BachelorsPercent <= 40
+replace bachelor_cat = 3 if BachelorsPercent > 40
+
+tabulate income_cat bachelor_cat, row col cell
+
+**Higher income areas tended to have higher rates of bachelor's degree attainment. Low & Middle ranges also correlated. Overall there is a relationship between income and education. 
+
+
+****************************************************
+* 3. Visulizing Findings & Refining Visuals
+****************************************************
+
+**Chart 1: Scatterplot
+
+twoway scatter FY24Income BachelorsPercent, ///
+    title("FY24 Income vs. Bachelor's Degree Attainment") ///
+    xtitle("Percent of Adults with Bachelor's Degree") ///
+    ytitle("FY24 Income ($)") ///
+    mcolor(purple) msize(small) msymbol(smdiamond)
+
+graph export "FY24 Income vs. Bachelor's Degree Attainment.png",replace
+
+**This scatterplot shows the relationship between educational attainment and income by state.There is a positive trend: states with higher percentages of adults holding bachelor's degrees tend to have higher average income.
+
+
+**Chart 2: Bar Chart
+label define bachelor_lbl 1 "Low Edu. Lvl" 2 "Medium Edu. Lvl" 3 "High Edu. Lvl"
+label values bachelor_cat bachelor_lbl
+sort bachelor_cat
+graph bar (mean) FY24Income, over(bachelor_cat, gap(30)) ///
+    bar(1, fcolor(erose) lcolor(black)) ///
+    bar(2, fcolor(sienna) lcolor(black)) ///
+    bar(3, fcolor(maroon) lcolor(black)) ///
+    title("Average FY24 Income by Education Level") ///
+	ytitle("Average FY24 Income ($)") ///
+    graphregion(margin(25 10 10 10))
+
+graph export "Average FY24 Income by Education Level.png", replace
+
+**Bar graph showcases that average income increases as educational attainment rises.
+
+****************************************************
+* 5. Wrap Up and Submit
+****************************************************
+
+**Both of these charts show the overall trend and relationships between education and income in a more tangible way. The scatterplot shows a clear positive relationships and the bar chart shows the relationship in a more categorical way. 
+
+save "HBS 514 Problem Set 2.dta", replace
