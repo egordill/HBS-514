@@ -1,0 +1,135 @@
+****************************************************
+*HBS 514
+*Estefany Gordillo-Rivas
+*Problem Set 3
+*March 10th, 2026
+*Project Title: Does income increase with degree attainment?
+
+****************************************************
+* 0. Preliminaries: Stata Setup
+****************************************************
+clear
+set matsize 800
+set more off
+set varabbrev off
+cd "/Users/estefanygordillo-rivas/Desktop/HBS 514 PS3"
+capture log close
+log using "/Users/estefanygordillo-rivas/Desktop/HBS 514 PS3", replace
+
+****************************************************
+* 1. Data Import
+****************************************************
+*Uploading my cleaned data from Google Drive
+
+import delimited "https://docs.google.com/spreadsheets/d/1uZ-qp1it86-oT0xgDmSESxarZa8JOrANso4Du2Xf48s/export?format=csv", clear
+
+describe
+
+*Bringing some items over from PS2 now that I've put a version of my cleaned dataset in as a google download link. Recreating some variables and I also noticed that I still have some observations that I do not need since they are not states, but instead regions
+
+drop if inlist(state,"District of Columbia","Far West","Great Lakes","Mideast","New England")
+
+drop if inlist(state,"Plains","Rocky Mountain","Southeast","Southwest","United States","Puerto Rico")
+
+rename y_24 FY24Income
+
+gen income_cat = .
+replace income_cat = 1 if FY24Income < 60000
+replace income_cat = 2 if FY24Income >= 60000 & FY24Income <= 80000
+replace income_cat = 3 if FY24Income > 80000
+
+gen bachelor_cat = .
+replace bachelor_cat = 1 if bachelorspercent < 30
+replace bachelor_cat = 2 if bachelorspercent >= 30 & bachelorspercent <= 40
+replace bachelor_cat = 3 if bachelorspercent > 40
+
+****************************************************
+* 2. Regression Model
+****************************************************
+*Choose one dependent variable (DV), preferably continuous
+	*Dependent Variable chosen: FY24Income (per capita personal income, in dollars, in 2024 for each U.S. state)
+
+*Select one or two independent variables (IVs)
+	*Independent Variables chosen: bachelorspercent (percentage of people with a bachelor's degree) & region 	
+
+*Label your model and include a brief comment on your hypothesis
+	*𝒀 = 𝜷𝟎 + 𝜷 ∗ 𝑿 + 𝜺
+	*Y= FY24Income
+	*X= bachelorspercent
+	
+	*Hypothesis: States with a higher percentage of residents holding bachelor's degrees will have 	higher per capita income levels.
+	
+reg FY24Income bachelorspercent
+
+****************************************************
+* 3. Visualize Relationships
+****************************************************
+*Create a scatterplot with a fitted regression line
+
+*Use title() and label() for clarity
+twoway (scatter FY24Income bachelorspercent, ///
+        mcolor(dkorange) msymbol(smdiamond) ///
+        xlabel(20(5)50) ylabel(50000(10000)100000) ///
+        legend(off)) ///
+       (lfit FY24Income bachelorspercent, lcolor(navy) lwidth(medium)), ///
+       title("Per Capita Income & Bachelor's Degree Attainment") ///
+       xtitle("Percent of Adults with Bachelor's Degree") ///
+       ytitle("Per Capita Income (Dollars)")
+
+graph export "Relationship Between Per Capita Income & Degree Attainment.png", replace
+	   
+*Comment on whether the plot aligns with your regression results
+	*The scatterplot shows a positive relationship between adults with a bachelor's degree and per capita income, which aligns with the regression table output. States with higher educational attainment tend to have higher income, which aligns with the positive slope estimated in the regression model.
+
+****************************************************
+* 4. Visualize Predicted Values
+****************************************************
+*Use margins and marginsplot to display predictions
+
+reg FY24Income bachelorspercent
+*predict FY24Income at bachelorspercent=20, 25, 30, ..., 70
+margins, at(bachelorspercent=(20(5)70))
+marginsplot, ///
+    title("Predicted Per Capita Income by Education Level") ///
+    xtitle("Percent of Adults with Bachelor's Degree") ///
+    ytitle("Predicted Per Capita Income ($)") ///
+    plotopts(lcolor(red) lwidth(medium)) ///
+    xlab(20(5)70)
+	
+graph export "Predicted Per Capita Income by Degree Attainment.png", replace
+	   
+
+*Interpret what the trends reveal in policy terms
+	*The marginsplot shows a positive trend: as the percentage of adults with a bachelor's degree increases, predicted per capita income rises. This suggests that investing in higher education can boost state income levels, so policies that expand access to college, improve graduation rates, or support workforce upskilling are likely to generate higher economic outcomes. States with lower educational attainment could particularly benefit from such initiatives to reduce income gaps across regions.
+
+****************************************************
+* 4. Export Regression Table
+****************************************************
+
+*For some reason without this line here my regression did not save anywhere, so after some tinkering I found that putting it down here as well also led to it saving in my working directory
+cd "/Users/estefanygordillo-rivas/Desktop/HBS 514 PS3"
+
+* Run regression
+reg FY24Income bachelorspercent
+
+* Store the model
+eststo M1
+
+* Export table as CSV in this folder
+esttab M1 using "RegressionTable.csv", ///
+    replace b(2) se(2) star(* 0.05 ** 0.01 *** 0.001) ///
+    label
+
+****************************************************
+* 5. Reflect & Comment
+****************************************************
+*Briefly interpret your regression results
+	*The coefficient on BachelorsPercent is 1355.66*, meaning that for each 1 percentage point increase in adults with a bachelor's degree, predicted per capita income rises by about $1,356. This effect is highly statistically significant (p < 0.001). The intercept of $22,158.42 represents the predicted income when the bachelor's degree share is zero, however this is hypothetical. 
+	
+*Explain whether visualization helped or challenged your understanding
+	*The scatterplot and fitted regression line show a clear positive relationship between educational attainment and income. The margins plot confirms that as the percentage of adults with a bachelor's degree increases, predicted per capita income rises steadily. Visualizations support the regression results and help illustrate the trend in an intuitive way.
+	
+*Identify a possible next step (e.g., adding a control or comparing groups)
+	*A possible next step is to add control variables, such as region or other economic indicators, to see if the effect of education persists. Another approach could be to compare states across income or education categories using income_cat or bachelor_cat. Finally, exploring non-linear relationships or estimating the potential income gains from increased education could provide useful policy insights.
+
+save "HBS 514 Problem Set 3.dta", replace
